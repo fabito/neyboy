@@ -1,6 +1,6 @@
 import asyncio
 import time
-from model import Game
+from neyboy import Game
 
 
 async def main():

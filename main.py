@@ -3,9 +3,9 @@ import numpy as np
 from tensorforce.agents import DQNAgent, PPOAgent, RandomAgent
 from tensorforce.execution import Runner
 
-from model import NeyboyEnvironment
+from environment import NeyboyEnvironment
 
-environment = NeyboyEnvironment(headless=True, frame_skip=1)
+environment = NeyboyEnvironment(headless=False, frame_skip=1)
 
 network_spec = [
     dict(type='conv2d', size=32, window=8, stride=4),
@@ -53,9 +53,9 @@ agent = PPOAgent(
     update_mode=dict(
         unit='episodes',
         # 10 episodes per update
-        batch_size=10,
+        batch_size=32,
         # Every 10 episodes
-        frequency=10
+        frequency=4
     ),
     memory=dict(
         type='latest',
@@ -76,14 +76,10 @@ agent = PPOAgent(
     #     "conv_sizes": [32, 32],
     #     "dense_sizes": [32]
     # },
-    # baseline_optimizer={
-    #     "type": "multi_step",
-    #     "optimizer": {
-    #         "type": "adam",
-    #         "learning_rate": 1e-3
-    #     },
-    #     "num_steps": 5
-    # }
+    step_optimizer=dict(
+        type='adam',
+        learning_rate=25e-5
+    ),
     saver={
          "directory": 'saved',
          "seconds": 600
