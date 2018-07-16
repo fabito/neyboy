@@ -94,7 +94,6 @@ class Game:
             const score = iframeWindow.cr_getC2Runtime().getLayerByName('Game').instances[4].text;
             return score;
         }''')
-        # print(iframeScore)
         return int(score) if score else 1
 
     async def tap_right(self, delay=200):
@@ -126,9 +125,11 @@ class Game:
         if await self.is_over():
             await self.wait_until_replay_button_is_active()
             print('Replay button active')
-            await self.page.mouse.click(400, 500)
+            # FIXME find out why the whataspp icon is clicked sporadically
+            sleep(0.5)
+            await self.page.mouse.click(400, 525)
         elif await self.is_in_start_screen():
-            pass
+            print('In start screen')
         else:
             await self.page.reload({'waitUntil': 'networkidle2'})
             await self.is_loaded()
@@ -234,7 +235,7 @@ ACTION_RIGHT = 2
 
 class NeyboyEnvironment(Environment):
 
-    def __init__(self, headless=True, frame_skip=4):
+    def __init__(self, headless=True, frame_skip=2.5):
         Environment.__init__(self)
         self.frame_skip = frame_skip
         self.game = SyncGame.create(headless=headless)
@@ -253,38 +254,30 @@ class NeyboyEnvironment(Environment):
         return self._state
 
     def execute(self, actions):
-        # print('Executing action: {}'.format(actions))
         self._score = self.game.get_score()
-        print('Current score: {}'.format(self._score))
         reward = 0
         is_over = False
 
         self.game.resume()
 
-        if actions == ACTION_NONE:
-            print('Tapping nothing')
-
-        elif actions == ACTION_LEFT:
-            print('Tapping left')
+        if actions == ACTION_LEFT:
             self.game.tap_left(0)
 
         elif actions == ACTION_RIGHT:
-            print('Tapping right')
             self.game.tap_right(0)
 
+        sleep(self.frame_skip/10)
         self.game.pause()
+
         self._state = self.game.screenshot()
-        sleep(0.4)
 
         if self.game.is_over():
-            print('Game is over')
             reward = -1
             is_over = True
         else:
-            new_score = self.game.get_score()
-            if new_score > self._score:
-                reward = new_score
+            reward = self.game.get_score() - self._score
 
+        print('Score: {}, Action: {}, Reward: {}, GameOver: {}'.format(self._score, ACTION_NAMES[actions], reward, is_over))
         return self._state, is_over, reward
 
     @property

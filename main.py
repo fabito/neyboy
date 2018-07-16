@@ -1,28 +1,11 @@
 import numpy as np
 
-from tensorforce.agents import DQNAgent
+from tensorforce.agents import DQNAgent, PPOAgent, RandomAgent
 from tensorforce.execution import Runner
-from tensorforce.core.preprocessors import Preprocessor
 
 from model import NeyboyEnvironment
 
-environment = NeyboyEnvironment(headless=False)
-
-# model = Sequential()
-# model.add(Conv2D(32, (8, 8), padding='same', strides=(4, 4), input_shape=(img_cols, img_rows, img_channels)))  # 80*80*4
-# model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Activation('relu'))
-# model.add(Conv2D(64, (4, 4), strides=(2, 2), padding='same'))
-# model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Activation('relu'))
-# model.add(Conv2D(64, (3, 3), strides=(1, 1), padding='same'))
-# model.add(MaxPooling2D(pool_size=(2, 2)))
-# model.add(Activation('relu'))
-# model.add(Flatten())
-# model.add(Dense(512))
-# model.add(Activation('relu'))
-# model.add(Dense(ACTIONS))
-# adam = Adam(lr=LEARNING_RATE)
+environment = NeyboyEnvironment(headless=True, frame_skip=1)
 
 network_spec = [
     dict(type='conv2d', size=32, window=8, stride=4),
@@ -30,8 +13,6 @@ network_spec = [
     dict(type='conv2d', size=64, window=3, stride=1),
     dict(type='flatten'),
     dict(type='dense', size=512),
-    # dict(type='dense', size=32),
-    # dict(type='lstm', size=32)
 ]
 
 preprocessing_config = [
@@ -40,20 +21,27 @@ preprocessing_config = [
         "width": 80,
         "height": 80
     },
-
     {
         "type": "grayscale"
     },
     {
         "type": "normalize"
-    }, {
+    },
+    {
         "type": "sequence",
         "length": 4
     }
 ]
 
 
-agent = DQNAgent(
+# agent = RandomAgent(
+#     states=environment.states,
+#     actions=environment.actions,
+# )
+
+# agent = DQNAgent()
+
+agent = PPOAgent(
     states=environment.states,
     actions=environment.actions,
     network=network_spec,
@@ -63,15 +51,15 @@ agent = DQNAgent(
     reward_preprocessing=None,
     # MemoryModel
     update_mode=dict(
-        unit='timesteps',
+        unit='episodes',
         # 10 episodes per update
-        batch_size=100,
+        batch_size=10,
         # Every 10 episodes
-        frequency=20
+        frequency=10
     ),
     memory=dict(
         type='latest',
-        include_next_states=True,
+        include_next_states=False,
         capacity=5000
     ),
     # DistributionModel
@@ -81,7 +69,26 @@ agent = DQNAgent(
         type='single',
         session_config=None,
         distributed_spec=None
-    )
+    ),
+    # baseline_mode="states",
+    # baseline={
+    #     "type": "cnn",
+    #     "conv_sizes": [32, 32],
+    #     "dense_sizes": [32]
+    # },
+    # baseline_optimizer={
+    #     "type": "multi_step",
+    #     "optimizer": {
+    #         "type": "adam",
+    #         "learning_rate": 1e-3
+    #     },
+    #     "num_steps": 5
+    # }
+    saver={
+         "directory": 'saved',
+         "seconds": 600
+    }
+
 )
 
 # Create the runner
@@ -96,7 +103,7 @@ def episode_finished(r):
 
 
 # Start learning
-runner.run(episodes=3000, max_episode_timesteps=200, episode_finished=episode_finished)
+runner.run(episodes=30000, max_episode_timesteps=2000, episode_finished=episode_finished)
 runner.close()
 
 # Print statistics
