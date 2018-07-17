@@ -23,8 +23,16 @@ class NeyboyEnvironment(Environment):
         self._state = self.game.screenshot()
         self._score = self.game.get_score()
 
-    def __str__(self):
-        return 'NeyboyEnvironment()'
+    @property
+    def states(self):
+        return dict(shape=self._state.shape, type='float32')
+
+    @property
+    def actions(self):
+        return dict(num_actions=len(ACTION_NAMES), type='int')
+
+    def close(self):
+        self.game.stop()
 
     def reset(self):
         self.game.restart()
@@ -59,13 +67,5 @@ class NeyboyEnvironment(Environment):
                                                                        is_over))
         return self._state, is_over, reward
 
-    @property
-    def states(self):
-        return dict(shape=self._state.shape, type='float32')
-
-    @property
-    def actions(self):
-        return dict(num_actions=len(ACTION_NAMES), type='int')
-
-    def close(self):
-        self.game.stop()
+    def __str__(self):
+        return 'NeyboyEnvironment()'

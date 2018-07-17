@@ -27,7 +27,7 @@ class Game:
         self.page = await self.browser.newPage()
 
     @staticmethod
-    async def create(headless=True, user_data_dir=None):
+    async def create(headless=True, user_data_dir=None) -> 'Game':
         o = Game(headless, user_data_dir)
         await o.initialize()
         return o
@@ -212,11 +212,11 @@ class Game:
 
 class SyncGame:
 
-    def __init__(self, game):
+    def __init__(self, game: Game):
         self.game = game
 
     @staticmethod
-    async def create(headless=True, user_data_dir=None):
+    async def create(headless=True, user_data_dir=None) -> 'SyncGame':
         o = sync(Game.create)(headless, user_data_dir)
         return SyncGame(o)
 
@@ -281,5 +281,4 @@ class CliGame:
     async def create(headless=True, user_data_dir=None):
         o = sync(Game.create)(headless, user_data_dir)
         return SyncGame(o)
-
 
