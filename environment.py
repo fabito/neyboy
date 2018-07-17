@@ -5,7 +5,6 @@ from tensorforce.environments import Environment
 from neyboy import SyncGame
 
 ACTION_NAMES = ["none", "left", "right"]
-
 ACTION_NONE = 0
 ACTION_LEFT = 1
 ACTION_RIGHT = 2
@@ -13,9 +12,12 @@ ACTION_RIGHT = 2
 
 class NeyboyEnvironment(Environment):
 
-    def __init__(self, headless=True, frame_skip=2.5):
+    def __init__(self, headless=True, frame_skip=2.5, scoring_reward=1, death_reward=-1, stay_alive_reward=0.1):
         Environment.__init__(self)
         self.frame_skip = frame_skip
+        self.stay_alive_reward = stay_alive_reward
+        self.death_reward = death_reward
+        self.scoring_reward = scoring_reward
         self.game = SyncGame.create(headless=headless)
         self.game.load()
         self._state = self.game.screenshot()
@@ -33,9 +35,7 @@ class NeyboyEnvironment(Environment):
 
     def execute(self, actions):
         self._score = self.game.get_score()
-        reward = 0
         is_over = False
-
         self.game.resume()
 
         if actions == ACTION_LEFT:
@@ -44,19 +44,19 @@ class NeyboyEnvironment(Environment):
         elif actions == ACTION_RIGHT:
             self.game.tap_right(0)
 
-        sleep(self.frame_skip/10)
+        sleep(self.frame_skip / 10)
         self.game.pause()
 
         self._state = self.game.screenshot()
 
         if self.game.is_over():
-            reward = -1
+            reward = self.death_reward
             is_over = True
         else:
-            reward = self.game.get_score() - self._score
-            # reward = self.game.get_score()
+            reward = self.scoring_reward if self.game.get_score() > self._score else self.stay_alive_reward
 
-        print('Score: {}, Action: {}, Reward: {}, GameOver: {}'.format(self._score, ACTION_NAMES[actions], reward, is_over))
+        print('Score: {}, Action: {}, Reward: {}, GameOver: {}'.format(self._score, ACTION_NAMES[actions], reward,
+                                                                       is_over))
         return self._state, is_over, reward
 
     @property

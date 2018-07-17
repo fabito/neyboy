@@ -1,5 +1,6 @@
 import base64
 import io
+import logging
 from time import sleep
 
 import numpy as np
@@ -43,8 +44,20 @@ class Game:
         }''')
 
     async def is_over(self):
-        animation_name = await self._get_cur_animation_name()
-        return animation_name == 'roll'
+        animation_name = await self._get_is_playing_status()
+        return animation_name == 2
+
+    async def _get_is_playing_status(self):
+        """
+        :return: 0 for start_screen, 1 for game_screen and 2 for game_over_screen
+        """
+        is_playing = await self.page.evaluate('''() => {
+                const iframe = document.getElementsByTagName("iframe")[0];
+                const iframeWindow = iframe.contentWindow;
+                return iframeWindow.cr_getC2Runtime !== undefined &&
+                       iframeWindow.cr_getC2Runtime().getEventVariableByName('isPlaying').data;
+                }''')
+        return int(is_playing)
 
     async def _get_cur_animation_name(self):
         animation_name = await self.page.evaluate('''() => {
@@ -91,6 +104,15 @@ class Game:
         }''')
         return int(score) if score else 1
 
+    async def get_high_score(self):
+        hiscore = await self.page.evaluate('''() => {
+                const iframe = document.getElementsByTagName("iframe")[0];
+                const iframeWindow = iframe.contentWindow;
+                return iframeWindow.cr_getC2Runtime !== undefined &&
+                       iframeWindow.cr_getC2Runtime().getEventVariableByName('hiscore').data;
+                }''')
+        return int(hiscore) if hiscore else 1
+
     async def tap_right(self, delay=200):
         await self.page.mouse.click(470, 400, {delay: delay})
 
@@ -116,15 +138,18 @@ class Game:
         }''')
 
     async def restart(self):
-        print('Restarting game')
-        if await self.is_over():
+        logging.debug('Restarting game')
+        playing_status = await self._get_is_playing_status()
+        if playing_status == 0:
+            logging.debug('Start screen')
+        # elif playing_status == 1:  # game is running
+        #     logging.debug('')
+        elif playing_status == 2:  # game over
             await self.wait_until_replay_button_is_active()
-            print('Replay button active')
+            logging.debug('Replay button active')
             # FIXME find out why the whataspp icon is clicked sporadically
             sleep(0.5)
             await self.page.mouse.click(400, 525)
-        elif await self.is_in_start_screen():
-            print('In start screen')
         else:
             await self.page.reload({'waitUntil': 'networkidle2'})
             await self.is_loaded()
