@@ -7,21 +7,28 @@ import numpy as np
 from PIL import Image
 from pyppeteer import launch
 from syncer import sync
+from pathlib import Path
 
 
 class Game:
 
-    def __init__(self, headless=True):
+    def __init__(self, headless=True, user_data_dir=None):
         self.headless = headless
+        self.user_data_dir = user_data_dir
         self.is_running = False
+        self.browser = None
+        self.page = None
 
     async def initialize(self):
-        self.browser = await launch(headless=self.headless)
+        if self.user_data_dir is not None:
+            self.browser = await launch(headless=self.headless, userDataDir=self.user_data_dir)
+        else :
+            self.browser = await launch(headless=self.headless)
         self.page = await self.browser.newPage()
 
     @staticmethod
-    async def create(headless):
-        o = Game(headless)
+    async def create(headless=True, user_data_dir=None):
+        o = Game(headless, user_data_dir)
         await o.initialize()
         return o
 
@@ -113,11 +120,24 @@ class Game:
                 }''')
         return int(hiscore) if hiscore else 1
 
+    async def get_scores(self):
+        scores = await self.page.evaluate('''() => {
+                const iframe = document.getElementsByTagName("iframe")[0];
+                const iframeWindow = iframe.contentWindow;
+                const runtime = iframeWindow.cr_getC2Runtime();
+                const score = runtime.getLayerByName('Game').instances[4].text;
+                const hiscore = runtime.getEventVariableByName('hiscore').data;
+                return {score, hiscore};
+                }''')
+        scores['score'] = int(scores['score'])
+        scores['hiscore'] = int(scores['hiscore'])
+        return scores
+
     async def tap_right(self, delay=200):
-        await self.page.mouse.click(470, 400, {delay: delay})
+        await self.page.mouse.click(470, 500, {delay: delay})
 
     async def tap_left(self, delay=200):
-        await self.page.mouse.click(200, 400, {delay: delay})
+        await self.page.mouse.click(200, 500, {delay: delay})
 
     async def stop(self):
         await self.browser.close()
@@ -186,8 +206,8 @@ class Game:
         })
 
     async def is_in_start_screen(self):
-        animation_name = self._get_cur_animation_name()
-        return animation_name == 'Default'
+        playing_status = await self._get_is_playing_status()
+        return playing_status == 0
 
 
 class SyncGame:
@@ -196,8 +216,8 @@ class SyncGame:
         self.game = game
 
     @staticmethod
-    def create(headless):
-        o = sync(Game.create)(headless)
+    async def create(headless=True, user_data_dir=None):
+        o = sync(Game.create)(headless, user_data_dir)
         return SyncGame(o)
 
     def dimensions(self):
@@ -224,10 +244,16 @@ class SyncGame:
     def get_score(self):
         return sync(self.game.get_score)()
 
-    def tap_right(self, delay=600):
+    def get_scores(self):
+        return sync(self.game.get_scores)()
+
+    def get_high_score(self):
+        return sync(self.game.get_high_score())()
+
+    def tap_right(self, delay=0):
         return sync(self.game.tap_right)(delay)
 
-    def tap_left(self, delay=600):
+    def tap_left(self, delay=0):
         return sync(self.game.tap_left)(delay)
 
     def stop(self):
