@@ -270,3 +270,16 @@ class SyncGame:
         img_bytes = sync(self.game.screenshot)(format, quality, encoding)
         img = Image.open(io.BytesIO(img_bytes))
         return np.array(img)
+
+
+class CliGame:
+
+    def __init__(self, game):
+        self.game = game
+
+    @staticmethod
+    async def create(headless=True, user_data_dir=None):
+        o = sync(Game.create)(headless, user_data_dir)
+        return SyncGame(o)
+
+

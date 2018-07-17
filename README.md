@@ -2,3 +2,10 @@
 
 Attempt to train a model to play the (Neyboy Challenge)[https://neyboy.com.br] using Tensorforce and
 Pyppeteer to create the game environment
+
+
+```
+game_id,frame_id,state,score,action
+
+
+```
