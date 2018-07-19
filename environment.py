@@ -3,7 +3,7 @@ from time import sleep
 
 from tensorforce.environments import Environment
 
-from neyboy import SyncGame, GAME_OVER_SCREEN
+from neyboy import SyncGame, GAME_OVER_SCREEN, EASTER_EGG_APPEARANCE_FREQUENCY
 
 ACTION_NAMES = ["none", "left", "right"]
 ACTION_NONE = 0
@@ -13,12 +13,13 @@ ACTION_RIGHT = 2
 
 class NeyboyEnvironment(Environment):
 
-    def __init__(self, headless=True, frame_skip=2.5, scoring_reward=1, death_reward=-1, stay_alive_reward=0.1, user_data_dir=None):
+    def __init__(self, headless=True, frame_skip=2.5, scoring_reward=1, death_reward=-1, stay_alive_reward=0.01, easter_egg_reward=5, user_data_dir=None):
         Environment.__init__(self)
         self.frame_skip = frame_skip
         self.stay_alive_reward = stay_alive_reward
         self.death_reward = death_reward
         self.scoring_reward = scoring_reward
+        self.easter_egg_reward = easter_egg_reward
 
         if user_data_dir is None:
             home_dir = Path.home()
@@ -31,13 +32,6 @@ class NeyboyEnvironment(Environment):
 
     def _update_state(self):
         self._state = self.game.get_state()
-        # self._state = state['snapshot']
-        # self._score = state['score']
-        # self._hiscore = state['hiscore']
-        # scores = self.game.get_scores()
-        # self._state = self.game.screenshot()
-        # self._score = scores['score']
-        # self._hiscore = scores['hiscore']
 
     @property
     def states(self):
@@ -72,6 +66,8 @@ class NeyboyEnvironment(Environment):
             is_over = True
         else:
             reward = self.scoring_reward if self._state.score > score_before_action else self.stay_alive_reward
+            if (self._state.score % EASTER_EGG_APPEARANCE_FREQUENCY) == 0:
+                reward += self.easter_egg_reward * self._state.score / EASTER_EGG_APPEARANCE_FREQUENCY
 
         print('HiScore: {}, Score: {}, Action: {}, Reward: {}, GameOver: {}'.format(self._state.hiscore, self._state.score, ACTION_NAMES[actions], reward,
                                                                        is_over))

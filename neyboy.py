@@ -19,6 +19,7 @@ GAME_SCREEN = 1
 #2 for game_over_screen
 GAME_OVER_SCREEN = 2
 
+EASTER_EGG_APPEARANCE_FREQUENCY = 10
 
 GameState = namedtuple('GameState', ['game_id', 'id', 'score', 'status', 'hiscore', 'snapshot', 'timestamp', 'dimensions'])
 
