@@ -19,8 +19,10 @@ def main():
     # parser.add_argument('-n', '--network', default=None, help="Network specification file")
     parser.add_argument('-e', '--episodes', type=int, default=30000, help="Number of episodes")
     parser.add_argument('-t', '--timesteps', type=int, default=None, help="Number of timesteps")
-    parser.add_argument('-m', '--max-episode-timesteps', type=int, default=2000, help="Maximum number of timesteps per episode")
-    parser.add_argument('-d', '--deterministic', action='store_true', default=False, help="Choose actions deterministically")
+    parser.add_argument('-m', '--max-episode-timesteps', type=int, default=2000,
+                        help="Maximum number of timesteps per episode")
+    parser.add_argument('-d', '--deterministic', action='store_true', default=False,
+                        help="Choose actions deterministically")
     parser.add_argument('-s', '--save', help="Save agent to this dir")
     parser.add_argument('-se', '--save-episodes', type=int, default=100, help="Save agent every x episodes")
     parser.add_argument('-l', '--load', help="Load agent from this dir")
@@ -30,7 +32,8 @@ def main():
     parser.add_argument('--visualize', action='store_true', default=False, help="Enable OpenAI Gym's visualization")
     parser.add_argument('-D', '--debug', action='store_true', default=True, help="Show debug outputs")
     parser.add_argument('-te', '--test', action='store_true', default=False, help="Test agent without learning.")
-    parser.add_argument('-sl', '--sleep', type=float, default=None, help="Slow down simulation by sleeping for x seconds (fractions allowed).")
+    parser.add_argument('-sl', '--sleep', type=float, default=None,
+                        help="Slow down simulation by sleeping for x seconds (fractions allowed).")
     parser.add_argument('-R', '--random-test-run', action="store_true", help="Do a quick random test run on the env")
 
     args = parser.parse_args()
@@ -131,10 +134,24 @@ def main():
             learning_rate=1e-5
         ),
         saver={
-            "directory": 'saved',
+            "directory": './checkpoints',
             "seconds": 600
-        }
-
+        },
+        # summarizer=dict(directory="./checkpoints",
+        #                 steps=50,
+        #                 labels=[
+        #                         # 'configuration',
+        #                         # 'gradients_scalar',
+        #                         # 'regularization',
+        #                         # 'inputs',
+        #                         # 'losses',
+        #                         # 'variables',
+        #                         # 'total-loss',
+        #                         # 'states',
+        #                         'actions',
+        #                         'rewards'
+        #                 ]
+        #                 )
     )
 
     if args.load:
@@ -159,7 +176,7 @@ def main():
     runner = Runner(
         agent=agent,
         environment=environment,
-        repeat_actions=1
+        repeat_actions=4
     )
 
     if args.debug:  # TODO: Timestep-based reporting

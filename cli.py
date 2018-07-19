@@ -1,6 +1,7 @@
 import asyncio
 from pathlib import Path
 
+from PIL import Image
 from blessed import Terminal
 
 from neyboy import Game
@@ -22,7 +23,12 @@ async def main():
     # print(t.bold_red_on_bright_green('It hurts my eyes!'))
 
     def save_snapshot(state):
-        print('Saving')
+        data_dir = Path('.tmp')
+        data_dir.mkdir(exist_ok=True)
+        snapshot = Image.fromarray(state.snapshot)
+        game_dir = Path(data_dir, state.game_id)
+        game_dir.mkdir(exist_ok=True)
+        snapshot.save(Path(game_dir, '{}.jpg'.format(state.id)))
 
     def print_state(action, state):
         with t.location(0, t.height - 1):
@@ -32,7 +38,6 @@ async def main():
             print(t.ljust('Hi Score: {hiscore}, Score: {score}, Status: {status}, Action: {action}'.format(**d)))
 
     start_time = dt.datetime.today().timestamp()
-    frame_count = 0
     i = 0
     while True:
         action = 'none'
@@ -47,7 +52,6 @@ async def main():
                 action = 'right'
             elif inp.code == t.KEY_UP:
                 await game.restart()
-                frame_count = 0
             elif inp.code == t.KEY_ESCAPE:
                 await game.stop()
                 break
@@ -55,7 +59,6 @@ async def main():
         threading.Thread(target=save_snapshot, args=(state,)).start()
         time_diff = dt.datetime.today().timestamp() - start_time
         i += 1
-        frame_count += 1
         print(i / time_diff)
 
 asyncio.get_event_loop().run_until_complete(main())

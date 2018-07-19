@@ -10,7 +10,7 @@ import numpy as np
 from PIL import Image
 from pyppeteer import launch
 from syncer import sync
-
+import datetime as dt
 
 #0 for start_screen
 START_SCREEN = 0
@@ -20,7 +20,7 @@ GAME_SCREEN = 1
 GAME_OVER_SCREEN = 2
 
 
-GameState = namedtuple('GameState', ['score', 'status', 'hiscore', 'snapshot'])
+GameState = namedtuple('GameState', ['game_id', 'id', 'score', 'status', 'hiscore', 'snapshot', 'timestamp', 'dimensions'])
 
 
 class Game:
@@ -33,6 +33,7 @@ class Game:
         self.page = None
         self.state = None
         self.game_id = str(uuid.uuid4())
+        self.state_id = 0
 
     async def initialize(self):
         if self.user_data_dir is not None:
@@ -66,7 +67,7 @@ class Game:
 
     async def is_over(self):
         animation_name = await self._get_is_playing_status()
-        return animation_name == 2
+        return animation_name == GAME_OVER_SCREEN
 
     async def _get_is_playing_status(self):
         """
@@ -95,7 +96,6 @@ class Game:
         return self
 
     async def start(self):
-        self.game_id = str(uuid.uuid4())
         await self.page.click('iframe.sc-htpNat')
         return self
 
@@ -178,6 +178,8 @@ class Game:
 
     async def restart(self):
         logging.debug('Restarting game')
+        self.game_id = str(uuid.uuid4())
+        self.state_id = 0
         playing_status = await self._get_is_playing_status()
         if playing_status == START_SCREEN:
             logging.debug('Start screen')
@@ -215,9 +217,12 @@ class Game:
 
     async def get_state(self, include_snapshot=True, fmt='image/jpeg', quality=30):
         # TODO add game status to state
+        self.state_id += 1
         state = await self.page.evaluate('''(includeSnapshot, format, quality) => {
             return new Promise((resolve, reject) => {
                 const iframe = document.getElementsByTagName('iframe')[0];
+                const {x, y, width, height} = iframe.getBoundingClientRect();
+                const dimensions = {x, y, width, height};
                 const iframeWindow = iframe.contentWindow;
                 if (includeSnapshot) {
                     iframeWindow['cr_onSnapshot'] = function(snapshot) {
@@ -225,7 +230,7 @@ class Game:
                         const score = runtime.getLayerByName('Game').instances[4].text || 0;
                         const hiscore = runtime.getEventVariableByName('hiscore').data || 0;
                         const status = runtime.getEventVariableByName('isPlaying').data;
-                        resolve({score, hiscore, snapshot, status});
+                        resolve({score, hiscore, snapshot, status, dimensions});
                     }
                     iframeWindow.cr_getSnapshot(format, quality);
                 } else {
@@ -234,20 +239,32 @@ class Game:
                         const hiscore = runtime.getEventVariableByName('hiscore').data || 0;
                         const status = runtime.getEventVariableByName('isPlaying').data;
                         const snapshot = null;
-                        resolve({score, hiscore, status, snapshot});
+                        resolve({score, hiscore, status, snapshot, dimensions});
                 }
             })
         }''', include_snapshot, fmt, quality)
-        if include_snapshot:
-            base64_string = state['snapshot']
-            base64_string = re.sub('^data:image/.+;base64,', '', base64_string)
-            imgdata = base64.b64decode(base64_string)
-            state['snapshot'] = np.array(Image.open(io.BytesIO(imgdata)))
 
         state['hiscore'] = int(state['hiscore'])
         state['score'] = int(state['score'])
         state['status'] = int(state['status'])
+        state['id'] = self.state_id
+        state['game_id'] = self.game_id
+        state['timestamp'] = dt.datetime.today().timestamp()
+
+        if include_snapshot:
+            dims = state['dimensions']
+            x = 0
+            y = dims['height'] / 2
+            height = dims['height'] - y - 30
+            width = dims['width']
+            base64_string = state['snapshot']
+            base64_string = re.sub('^data:image/.+;base64,', '', base64_string)
+            imgdata = base64.b64decode(base64_string)
+            image = Image.open(io.BytesIO(imgdata))
+            state['snapshot'] = np.array(image.crop((x, y, x + width, y + height)))
+
         self.state = GameState(**state)
+
         return self.state
 
     async def save_screenshot(self, path, format="jpeg", quality=30):
@@ -327,5 +344,5 @@ class SyncGame:
         img = Image.open(io.BytesIO(img_bytes))
         return np.array(img)
 
-    def get_state(self):
-        return sync(self.game.get_state)()
+    def get_state(self, include_snapshot=True, fmt='image/jpeg', quality=30):
+        return sync(self.game.get_state)(include_snapshot, fmt, quality)

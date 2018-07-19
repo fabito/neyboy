@@ -3,7 +3,7 @@ from time import sleep
 
 from tensorforce.environments import Environment
 
-from neyboy import SyncGame
+from neyboy import SyncGame, GAME_OVER_SCREEN
 
 ACTION_NAMES = ["none", "left", "right"]
 ACTION_NONE = 0
@@ -30,18 +30,18 @@ class NeyboyEnvironment(Environment):
         self._update_state()
 
     def _update_state(self):
-        # state = self.game.get_state()
+        self._state = self.game.get_state()
         # self._state = state['snapshot']
         # self._score = state['score']
         # self._hiscore = state['hiscore']
-        scores = self.game.get_scores()
-        self._state = self.game.screenshot()
-        self._score = scores['score']
-        self._hiscore = scores['hiscore']
+        # scores = self.game.get_scores()
+        # self._state = self.game.screenshot()
+        # self._score = scores['score']
+        # self._hiscore = scores['hiscore']
 
     @property
     def states(self):
-        return dict(shape=self._state.shape, type='float32')
+        return dict(shape=self._state.snapshot.shape, type='float32')
 
     @property
     def actions(self):
@@ -54,10 +54,10 @@ class NeyboyEnvironment(Environment):
         self.game.restart()
         self._update_state()
         self.game.pause()
-        return self._state
+        return self._state.snapshot
 
     def execute(self, actions):
-        score_before_action = self._score
+        score_before_action = self._state.score
         is_over = False
         self.game.resume()
         if actions == ACTION_LEFT:
@@ -65,19 +65,17 @@ class NeyboyEnvironment(Environment):
         elif actions == ACTION_RIGHT:
             self.game.tap_right()
         # sleep(self.frame_skip / 10)
-        self.game.pause()
-
         self._update_state()
-
-        if self.game.is_over():
+        self.game.pause()
+        if self._state.status == GAME_OVER_SCREEN:
             reward = self.death_reward
             is_over = True
         else:
-            reward = self.scoring_reward if self._score > score_before_action else self.stay_alive_reward
+            reward = self.scoring_reward if self._state.score > score_before_action else self.stay_alive_reward
 
-        print('HiScore: {}, Score: {}, Action: {}, Reward: {}, GameOver: {}'.format(self._hiscore, self._score, ACTION_NAMES[actions], reward,
+        print('HiScore: {}, Score: {}, Action: {}, Reward: {}, GameOver: {}'.format(self._state.hiscore, self._state.score, ACTION_NAMES[actions], reward,
                                                                        is_over))
-        return self._state, is_over, reward
+        return self._state.snapshot, is_over, reward
 
     def __str__(self):
         return 'NeyboyEnvironment()'
