@@ -1,13 +1,26 @@
 import base64
 import io
 import logging
+import re
+import uuid
+from collections import namedtuple
 from time import sleep
 
 import numpy as np
 from PIL import Image
 from pyppeteer import launch
 from syncer import sync
-from pathlib import Path
+
+
+#0 for start_screen
+START_SCREEN = 0
+#1 for game_screen
+GAME_SCREEN = 1
+#2 for game_over_screen
+GAME_OVER_SCREEN = 2
+
+
+GameState = namedtuple('GameState', ['score', 'status', 'hiscore', 'snapshot'])
 
 
 class Game:
@@ -18,11 +31,13 @@ class Game:
         self.is_running = False
         self.browser = None
         self.page = None
+        self.state = None
+        self.game_id = str(uuid.uuid4())
 
     async def initialize(self):
         if self.user_data_dir is not None:
             self.browser = await launch(headless=self.headless, userDataDir=self.user_data_dir)
-        else :
+        else:
             self.browser = await launch(headless=self.headless)
         self.page = await self.browser.newPage()
 
@@ -36,7 +51,6 @@ class Game:
         # Get dimensions of the canvas element
         dimensions = await self.page.evaluate('''() => {
                 const iframe = document.getElementsByTagName("iframe")[0];
-                //let {x, y, width, height} = iframe.contentWindow.document.getElementById("c2canvas").getBoundingClientRect();
                 let {x, y, width, height} = iframe.getBoundingClientRect();
                 return {x, y, width, height};
             }''')
@@ -81,6 +95,7 @@ class Game:
         return self
 
     async def start(self):
+        self.game_id = str(uuid.uuid4())
         await self.page.click('iframe.sc-htpNat')
         return self
 
@@ -125,19 +140,23 @@ class Game:
                 const iframe = document.getElementsByTagName("iframe")[0];
                 const iframeWindow = iframe.contentWindow;
                 const runtime = iframeWindow.cr_getC2Runtime();
-                const score = runtime.getLayerByName('Game').instances[4].text;
-                const hiscore = runtime.getEventVariableByName('hiscore').data;
+                const score = runtime.getLayerByName('Game').instances[4].text || 0;
+                const hiscore = runtime.getEventVariableByName('hiscore').data || 0;
                 return {score, hiscore};
                 }''')
         scores['score'] = int(scores['score'])
         scores['hiscore'] = int(scores['hiscore'])
         return scores
 
-    async def tap_right(self, delay=200):
-        await self.page.mouse.click(470, 500, {delay: delay})
+    async def tap_right(self, delay=0):
+        await self.page.mouse.click(470, 500, {'delay': delay})
+        # FIXME Investigate why pressing arrow keys aren't working
+        # await self.page.keyboard.press('ArrowRight', {'text': 'd', 'delay': delay})
+        # await self.page.keyboard.press("d", {'text': 'd', 'delay': delay})
 
-    async def tap_left(self, delay=200):
-        await self.page.mouse.click(200, 500, {delay: delay})
+    async def tap_left(self, delay=0):
+        await self.page.mouse.click(200, 500, {'delay': delay})
+        # await self.page.keyboard.press('ArrowLeft', {'text': 'a', 'delay': delay})
 
     async def stop(self):
         await self.browser.close()
@@ -160,11 +179,11 @@ class Game:
     async def restart(self):
         logging.debug('Restarting game')
         playing_status = await self._get_is_playing_status()
-        if playing_status == 0:
+        if playing_status == START_SCREEN:
             logging.debug('Start screen')
         # elif playing_status == 1:  # game is running
         #     logging.debug('')
-        elif playing_status == 2:  # game over
+        elif playing_status == GAME_OVER_SCREEN:  # game over
             await self.wait_until_replay_button_is_active()
             logging.debug('Replay button active')
             # FIXME find out why the whataspp icon is clicked sporadically
@@ -194,6 +213,43 @@ class Game:
             encoded_snapshot = base64.b64encode(snapshot)
             return encoded_snapshot.decode('ascii')
 
+    async def get_state(self, include_snapshot=True, fmt='image/jpeg', quality=30):
+        # TODO add game status to state
+        state = await self.page.evaluate('''(includeSnapshot, format, quality) => {
+            return new Promise((resolve, reject) => {
+                const iframe = document.getElementsByTagName('iframe')[0];
+                const iframeWindow = iframe.contentWindow;
+                if (includeSnapshot) {
+                    iframeWindow['cr_onSnapshot'] = function(snapshot) {
+                        const runtime = iframeWindow.cr_getC2Runtime();
+                        const score = runtime.getLayerByName('Game').instances[4].text || 0;
+                        const hiscore = runtime.getEventVariableByName('hiscore').data || 0;
+                        const status = runtime.getEventVariableByName('isPlaying').data;
+                        resolve({score, hiscore, snapshot, status});
+                    }
+                    iframeWindow.cr_getSnapshot(format, quality);
+                } else {
+                        const runtime = iframeWindow.cr_getC2Runtime();
+                        const score = runtime.getLayerByName('Game').instances[4].text || 0;
+                        const hiscore = runtime.getEventVariableByName('hiscore').data || 0;
+                        const status = runtime.getEventVariableByName('isPlaying').data;
+                        const snapshot = null;
+                        resolve({score, hiscore, status, snapshot});
+                }
+            })
+        }''', include_snapshot, fmt, quality)
+        if include_snapshot:
+            base64_string = state['snapshot']
+            base64_string = re.sub('^data:image/.+;base64,', '', base64_string)
+            imgdata = base64.b64decode(base64_string)
+            state['snapshot'] = np.array(Image.open(io.BytesIO(imgdata)))
+
+        state['hiscore'] = int(state['hiscore'])
+        state['score'] = int(state['score'])
+        state['status'] = int(state['status'])
+        self.state = GameState(**state)
+        return self.state
+
     async def save_screenshot(self, path, format="jpeg", quality=30):
         dims = await self.dimensions()
         dims['y'] = dims['height'] / 2
@@ -207,7 +263,7 @@ class Game:
 
     async def is_in_start_screen(self):
         playing_status = await self._get_is_playing_status()
-        return playing_status == 0
+        return playing_status == START_SCREEN
 
 
 class SyncGame:
@@ -216,7 +272,7 @@ class SyncGame:
         self.game = game
 
     @staticmethod
-    async def create(headless=True, user_data_dir=None) -> 'SyncGame':
+    def create(headless=True, user_data_dir=None) -> 'SyncGame':
         o = sync(Game.create)(headless, user_data_dir)
         return SyncGame(o)
 
@@ -271,14 +327,5 @@ class SyncGame:
         img = Image.open(io.BytesIO(img_bytes))
         return np.array(img)
 
-
-class CliGame:
-
-    def __init__(self, game):
-        self.game = game
-
-    @staticmethod
-    async def create(headless=True, user_data_dir=None):
-        o = sync(Game.create)(headless, user_data_dir)
-        return SyncGame(o)
-
+    def get_state(self):
+        return sync(self.game.get_state)()
