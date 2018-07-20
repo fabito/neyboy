@@ -10,7 +10,7 @@ from PIL import Image
 from tensorforce.agents import DQNAgent, PPOAgent, RandomAgent
 from tensorforce.execution import Runner
 
-from environment import NeyboyEnvironment
+from .environment import NeyboyEnvironment
 
 
 def main():
@@ -21,6 +21,8 @@ def main():
     parser.add_argument('-t', '--timesteps', type=int, default=None, help="Number of timesteps")
     parser.add_argument('-m', '--max-episode-timesteps', type=int, default=2000,
                         help="Maximum number of timesteps per episode")
+    parser.add_argument('-r', '--repeat-actions', type=int, default=4,
+                        help="repeat_actions")
     parser.add_argument('-d', '--deterministic', action='store_true', default=False,
                         help="Choose actions deterministically")
     parser.add_argument('-s', '--save', help="Save agent to this dir")
@@ -42,6 +44,14 @@ def main():
 
     logger = logging.getLogger(__file__)
     logger.setLevel(logging.INFO)
+
+    if args.save:
+        save_dir = os.path.dirname(args.save)
+        if not os.path.isdir(save_dir):
+            try:
+                os.mkdir(save_dir, 0o755)
+            except OSError:
+                raise OSError("Cannot save agent to dir {} ()".format(save_dir))
 
     environment = NeyboyEnvironment(headless=not args.visualize, frame_skip=2.5)
 
@@ -114,7 +124,7 @@ def main():
             # 10 episodes per update
             batch_size=32,
             # Every 10 episodes
-            frequency=4
+            frequency=10
         ),
         memory=dict(
             type='latest',
@@ -133,25 +143,10 @@ def main():
             type='adam',
             learning_rate=1e-5
         ),
-        saver={
-            "directory": './checkpoints',
-            "seconds": 600
-        },
-        # summarizer=dict(directory="./checkpoints",
-        #                 steps=50,
-        #                 labels=[
-        #                         # 'configuration',
-        #                         # 'gradients_scalar',
-        #                         # 'regularization',
-        #                         # 'inputs',
-        #                         # 'losses',
-        #                         # 'variables',
-        #                         # 'total-loss',
-        #                         # 'states',
-        #                         'actions',
-        #                         'rewards'
-        #                 ]
-        #                 )
+        saver=dict(
+            directory='./checkpoints3',
+            seconds=600
+        ),
     )
 
     if args.load:
@@ -159,14 +154,6 @@ def main():
         if not os.path.isdir(load_dir):
             raise OSError("Could not load agent from {}: No such directory.".format(load_dir))
         agent.restore_model(args.load)
-
-    if args.save:
-        save_dir = os.path.dirname(args.save)
-        if not os.path.isdir(save_dir):
-            try:
-                os.mkdir(save_dir, 0o755)
-            except OSError:
-                raise OSError("Cannot save agent to dir {} ()".format(save_dir))
 
     if args.debug:
         logger.info("-" * 16)
@@ -176,7 +163,7 @@ def main():
     runner = Runner(
         agent=agent,
         environment=environment,
-        repeat_actions=4
+        repeat_actions=args.repeat_actions
     )
 
     if args.debug:  # TODO: Timestep-based reporting

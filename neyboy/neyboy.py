@@ -1,6 +1,7 @@
 import base64
 import io
 import logging
+import random
 import re
 import uuid
 from collections import namedtuple
@@ -97,7 +98,11 @@ class Game:
         return self
 
     async def start(self):
-        await self.page.click('iframe.sc-htpNat')
+        if random.randint(0,1):
+            await self.tap_right()
+        else:
+            await self.tap_left()
+        # await self.page.click('iframe.sc-htpNat')
         return self
 
     async def pause(self):

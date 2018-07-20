@@ -4,7 +4,7 @@ from pathlib import Path
 from PIL import Image
 from blessed import Terminal
 
-from neyboy import Game
+from .neyboy import Game
 import datetime as dt
 import threading
 

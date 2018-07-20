@@ -15,7 +15,7 @@ import time
 from tensorforce import TensorForceError
 from tensorforce.agents import Agent
 from tensorforce.execution import Runner
-from environment import NeyboyEnvironment
+from .environment import NeyboyEnvironment
 
 
 # python examples/openai_gym.py Pong-ram-v0 -a examples/configs/vpg.json -n examples/configs/mlp2_network.json -e 50000 -m 2000

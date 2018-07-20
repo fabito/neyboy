@@ -103,7 +103,6 @@ venv.bak/
 # mypy
 .mypy_cache/
 .idea/
-saved/
-saved_/
+saved*/
 .tmp/
-checkpoints/
+checkpoints*/
