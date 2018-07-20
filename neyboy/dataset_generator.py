@@ -4,7 +4,7 @@ from pathlib import Path
 
 from blessed import Terminal
 
-from neyboy import Game
+from .neyboy import Game
 
 
 async def main():

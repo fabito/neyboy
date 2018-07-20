@@ -1,4 +1,4 @@
-from neyboy import SyncGame
+from .neyboy import SyncGame
 from time import sleep
 
 
