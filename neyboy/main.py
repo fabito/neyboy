@@ -122,7 +122,7 @@ def main():
         update_mode=dict(
             unit='episodes',
             # 10 episodes per update
-            batch_size=32,
+            batch_size=64,
             # Every 10 episodes
             frequency=10
         ),
@@ -141,7 +141,7 @@ def main():
         ),
         step_optimizer=dict(
             type='adam',
-            learning_rate=1e-5
+            learning_rate=5e-5
         ),
         saver=dict(
             directory='./checkpoints3',
