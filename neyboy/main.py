@@ -12,11 +12,10 @@ from .environment import NeyboyEnvironment
 
 def main():
     parser = argparse.ArgumentParser()
-    # parser.add_argument('-a', '--agent', help="Agent configuration file")
-    # parser.add_argument('-n', '--network', default=None, help="Network specification file")
     parser.add_argument('-e', '--episodes', type=int, default=30000, help="Number of episodes")
     parser.add_argument('-t', '--timesteps', type=int, default=None, help="Number of timesteps")
     parser.add_argument('-b', '--batch-size', type=int, default=64, help="Batch Size")
+    parser.add_argument('-lr', '--learning-rate', type=float, default=1e-5, help="Learning Rate")
     parser.add_argument('-m', '--max-episode-timesteps', type=int, default=2000,
                         help="Maximum number of timesteps per episode")
     parser.add_argument('-r', '--repeat-actions', type=int, default=4,
@@ -26,9 +25,6 @@ def main():
     parser.add_argument('-s', '--save-dir', help="Save agent to this dir")
     parser.add_argument('-se', '--save-episodes', type=int, default=100, help="Save agent every x episodes")
     parser.add_argument('-l', '--load', help="Load agent from this dir")
-    parser.add_argument('--monitor', help="Save results to this directory")
-    parser.add_argument('--monitor-safe', action='store_true', default=False, help="Do not overwrite previous results")
-    parser.add_argument('--monitor-video', type=int, default=0, help="Save video every x steps (0 = disabled)")
     parser.add_argument('--visualize', action='store_true', default=False, help="Enable OpenAI Gym's visualization")
     parser.add_argument('-D', '--debug', action='store_true', default=True, help="Show debug outputs")
     parser.add_argument('-te', '--test', action='store_true', default=False, help="Test agent without learning.")
@@ -40,10 +36,10 @@ def main():
 
     logging.basicConfig(level=logging.INFO)
 
-    logger = logging.getLogger(__file__)
+    logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-    environment = NeyboyEnvironment(headless=not args.visualize, frame_skip=2.5)
+    environment = NeyboyEnvironment(headless=not args.visualize)
 
     # Do a quick random test-run with image capture of the first n images -> then exit after 1000 steps.
     if args.random_test_run:
@@ -124,7 +120,7 @@ def main():
         ),
         step_optimizer=dict(
             type='adam',
-            learning_rate=1e-5
+            learning_rate=args.learning_rate
         ),
         saver=dict(
             directory=args.save_dir,
