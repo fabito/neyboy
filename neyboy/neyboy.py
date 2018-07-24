@@ -1,4 +1,5 @@
 import base64
+import datetime as dt
 import io
 import logging
 import random
@@ -11,7 +12,6 @@ import numpy as np
 from PIL import Image
 from pyppeteer import launch
 from syncer import sync
-import datetime as dt
 
 #0 for start_screen
 START_SCREEN = 0

@@ -1,4 +1,4 @@
 syncer
-tensorforce[tf]
+tensorforce[tf-gpu]
 pyppeteer
 blessed

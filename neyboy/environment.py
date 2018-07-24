@@ -1,5 +1,5 @@
+import logging
 from pathlib import Path
-from time import sleep
 
 from tensorforce.environments import Environment
 
@@ -51,30 +51,31 @@ class NeyboyEnvironment(Environment):
         return self._state.snapshot
 
     def execute(self, actions):
-        score_before_action = self._state.score
-        is_over = False
+        # score_before_action = self._state.score
+        # is_over = False
         self.game.resume()
         if actions == ACTION_LEFT:
             self.game.tap_left()
         elif actions == ACTION_RIGHT:
             self.game.tap_right()
-        # sleep(self.frame_skip / 10)
+
         self._update_state()
-        # self.game.pause()
-        if self._state.status == GAME_OVER_SCREEN:
-            reward = self.death_reward
-            is_over = True
-        else:
-            if self._state.score > score_before_action:
-                reward = self.scoring_reward
-            else:
-                reward = self.stay_alive_reward + self._state.score / 1000
+        
+        self.game.pause()
 
-            if (self._state.score % EASTER_EGG_APPEARANCE_FREQUENCY) == 0:
-                reward += self.easter_egg_reward * self._state.score / EASTER_EGG_APPEARANCE_FREQUENCY
+        reward = 1.0
+        is_over = self._state.status == GAME_OVER_SCREEN
+        # else:
+            # if self._state.score > score_before_action:
+            #     reward = self.scoring_reward
+            # else:
+            #     reward = self.stay_alive_reward + self._state.score / 1000
+
+            # if (self._state.score % EASTER_EGG_APPEARANCE_FREQUENCY) == 0:
+            #     reward += self.easter_egg_reward * self._state.score / EASTER_EGG_APPEARANCE_FREQUENCY
 
 
-        print('HiScore: {}, Score: {}, Action: {}, Reward: {}, GameOver: {}'.format(self._state.hiscore, self._state.score, ACTION_NAMES[actions], reward,
+        logging.debug('HiScore: {}, Score: {}, Action: {}, Reward: {}, GameOver: {}'.format(self._state.hiscore, self._state.score, ACTION_NAMES[actions], reward,
                                                                        is_over))
         return self._state.snapshot, is_over, reward
 

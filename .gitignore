@@ -106,3 +106,7 @@ venv.bak/
 saved*/
 .tmp/
 checkpoints*/
+exp_fs2_fs1/
+/5k_episodes_fs1/
+/20k_episodes_fs2/
+/tmp123/
