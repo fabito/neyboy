@@ -1,4 +1,5 @@
 syncer
-tensorforce[tf-gpu]
+git+https://github.com/reinforceio/tensorforce.git
 pyppeteer
 blessed
+asciimatics

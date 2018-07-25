@@ -221,8 +221,14 @@ class Game:
             encoded_snapshot = base64.b64encode(snapshot)
             return encoded_snapshot.decode('ascii')
 
-    async def get_state(self, include_snapshot=True, fmt='image/jpeg', quality=30):
-        # TODO add game status to state
+    async def get_state(self, include_snapshot='numpy', fmt='image/jpeg', quality=30, crop=True):
+        """
+
+        :param include_snapshot: numpy, pil, ascii, bytes, None
+        :param fmt:
+        :param quality:
+        :return:
+        """
         self.state_id += 1
         state = await self.page.evaluate('''(includeSnapshot, format, quality) => {
             return new Promise((resolve, reject) => {
@@ -257,7 +263,7 @@ class Game:
         state['game_id'] = self.game_id
         state['timestamp'] = dt.datetime.today().timestamp()
 
-        if include_snapshot:
+        if include_snapshot is not None:
             dims = state['dimensions']
             x = 0
             y = dims['height'] / 2
@@ -266,8 +272,23 @@ class Game:
             base64_string = state['snapshot']
             base64_string = re.sub('^data:image/.+;base64,', '', base64_string)
             imgdata = base64.b64decode(base64_string)
-            image = Image.open(io.BytesIO(imgdata))
-            state['snapshot'] = np.array(image.crop((x, y, x + width, y + height)))
+
+            bytes_io = io.BytesIO(imgdata)
+            image = Image.open(bytes_io)
+
+            if crop:
+                image = image.crop((x, y, x + width, y + height))
+
+            if include_snapshot == 'numpy':
+                state['snapshot'] = np.array(image)
+            elif include_snapshot == 'pil':
+                state['snapshot'] = image
+            elif include_snapshot == 'ascii':
+                state['snapshot'] = self.screenshot_to_ascii(image, 0.1, 3)
+            elif include_snapshot == 'bytes':
+                state['snapshot'] = bytes_io
+            else:
+                raise ValueError('Supported snapshot formats are: numpy, pil, ascii, bytes')
 
         self.state = GameState(**state)
 
@@ -288,67 +309,95 @@ class Game:
         playing_status = await self._get_is_playing_status()
         return playing_status == START_SCREEN
 
+    @staticmethod
+    def screenshot_to_ascii(img, scale, intensity_correction_factor, width_correction_factor=7 / 4):
+        """
+        https://gist.github.com/cdiener/10491632
+        :return:
+        """
+        chars = np.asarray(list(' .,:;irsXA253hMHGS#9B&@'))
+        SC, GCF, WCF = scale, intensity_correction_factor, width_correction_factor
+        S = (round(img.size[0] * SC * WCF), round(img.size[1] * SC))
+        img = np.sum(np.asarray(img.resize(S)), axis=2)
+        img -= img.min()
+        img = (1.0 - img / img.max()) ** GCF * (chars.size - 1)
+        return "\n".join(("".join(r) for r in chars[img.astype(int)]))
+
+
+# class SyncGame:
+#
+#     def __init__(self, game: Game):
+#         self.game = game
+#
+#     @staticmethod
+#     def create(headless=True, user_data_dir=None) -> 'SyncGame':
+#         o = sync(Game.create)(headless, user_data_dir)
+#         return SyncGame(o)
+#
+#     def dimensions(self):
+#         return sync(self.game.dimensions)()
+#
+#     def is_loaded(self):
+#         return sync(self.game.is_loaded)()
+#
+#     def is_over(self):
+#         return sync(self.game.is_over)()
+#
+#     def load(self):
+#         return sync(self.game.load)()
+#
+#     def start(self):
+#         return sync(self.game.start)()
+#
+#     def pause(self):
+#         return sync(self.game.pause)()
+#
+#     def resume(self):
+#         return sync(self.game.resume)()
+#
+#     def get_score(self):
+#         return sync(self.game.get_score)()
+#
+#     def get_scores(self):
+#         return sync(self.game.get_scores)()
+#
+#     def get_high_score(self):
+#         return sync(self.game.get_high_score())()
+#
+#     def tap_right(self, delay=0):
+#         return sync(self.game.tap_right)(delay)
+#
+#     def tap_left(self, delay=0):
+#         return sync(self.game.tap_left)(delay)
+#
+#     def stop(self):
+#         return sync(self.game.stop)()
+#
+#     def restart(self):
+#         return sync(self.game.restart)()
+#
+#     def _click(self, x, y):
+#         return sync(self.game._click)(x, y)
+#
+#     def screenshot(self, format="jpeg", quality=30, encoding='binary'):
+#         # reconstruct image as an numpy array
+#         img_bytes = sync(self.game.screenshot)(format, quality, encoding)
+#         img = Image.open(io.BytesIO(img_bytes))
+#         return np.array(img)
+#
+#     def get_state(self, include_snapshot='numpy', fmt='image/jpeg', quality=30, crop=True):
+#         return sync(self.game.get_state)(include_snapshot, fmt, quality, crop)
+#
 
 class SyncGame:
 
     def __init__(self, game: Game):
         self.game = game
 
+    def __getattr__(self, attr):
+        return sync(getattr(self.game, attr))
+
     @staticmethod
     def create(headless=True, user_data_dir=None) -> 'SyncGame':
         o = sync(Game.create)(headless, user_data_dir)
         return SyncGame(o)
-
-    def dimensions(self):
-        return sync(self.game.dimensions)()
-
-    def is_loaded(self):
-        return sync(self.game.is_loaded)()
-
-    def is_over(self):
-        return sync(self.game.is_over)()
-
-    def load(self):
-        return sync(self.game.load)()
-
-    def start(self):
-        return sync(self.game.start)()
-
-    def pause(self):
-        return sync(self.game.pause)()
-
-    def resume(self):
-        return sync(self.game.resume)()
-
-    def get_score(self):
-        return sync(self.game.get_score)()
-
-    def get_scores(self):
-        return sync(self.game.get_scores)()
-
-    def get_high_score(self):
-        return sync(self.game.get_high_score())()
-
-    def tap_right(self, delay=0):
-        return sync(self.game.tap_right)(delay)
-
-    def tap_left(self, delay=0):
-        return sync(self.game.tap_left)(delay)
-
-    def stop(self):
-        return sync(self.game.stop)()
-
-    def restart(self):
-        return sync(self.game.restart)()
-
-    def _click(self, x, y):
-        return sync(self.game._click)(x, y)
-
-    def screenshot(self, format="jpeg", quality=30, encoding='binary'):
-        # reconstruct image as an numpy array
-        img_bytes = sync(self.game.screenshot)(format, quality, encoding)
-        img = Image.open(io.BytesIO(img_bytes))
-        return np.array(img)
-
-    def get_state(self, include_snapshot=True, fmt='image/jpeg', quality=30):
-        return sync(self.game.get_state)(include_snapshot, fmt, quality)

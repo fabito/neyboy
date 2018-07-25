@@ -41,7 +41,7 @@ async def main():
     i = 0
     while True:
         action = 'none'
-        state = await game.get_state(include_snapshot=True)
+        state = await game.get_state(include_snapshot='')
         with t.raw():
             inp = t.inkey(timeout=.001)
             if inp.code == t.KEY_LEFT:
