@@ -46,11 +46,11 @@ class NeyboyEnvironment(Environment):
         self.game.pause()
         return self._state.snapshot
 
-    def execute(self, actions):
+    def execute(self, action):
         self.game.resume()
-        if actions == ACTION_LEFT:
+        if action == ACTION_LEFT:
             self.game.tap_left()
-        elif actions == ACTION_RIGHT:
+        elif action == ACTION_RIGHT:
             self.game.tap_right()
         self._update_state()
         self.game.pause()
@@ -58,7 +58,7 @@ class NeyboyEnvironment(Environment):
         is_over = self._state.status == GAME_OVER_SCREEN
         logging.debug('HiScore: {}, Score: {}, Action: {}, Reward: {}, GameOver: {}'.format(self._state.hiscore,
                                                                                             self._state.score,
-                                                                                            ACTION_NAMES[actions],
+                                                                                            ACTION_NAMES[action],
                                                                                             reward,
                                                                                             is_over))
         return self._state.snapshot, is_over, reward
