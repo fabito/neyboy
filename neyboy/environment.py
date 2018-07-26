@@ -1,9 +1,14 @@
 import logging
+import math
 from pathlib import Path
 
 from tensorforce.environments import Environment
 
 from .neyboy import SyncGame, GAME_OVER_SCREEN
+
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
 ACTION_NAMES = ["none", "left", "right"]
 ACTION_NONE = 0
@@ -13,7 +18,7 @@ ACTION_RIGHT = 2
 
 class NeyboyEnvironment(Environment):
 
-    def __init__(self, headless=True, user_data_dir=None):
+    def __init__(self, headless=True, scoring_reward=1, death_reward=-1, stay_alive_reward=0.01, easter_egg_reward=5, user_data_dir=None):
         Environment.__init__(self)
 
         if user_data_dir is None:
@@ -21,12 +26,21 @@ class NeyboyEnvironment(Environment):
             neyboy_data_dir = Path(home_dir, 'neyboy')
             user_data_dir = str(neyboy_data_dir)
 
+        self.stay_alive_reward = stay_alive_reward
+        self.death_reward = death_reward
+        self.scoring_reward = scoring_reward
+        self.easter_egg_reward = easter_egg_reward
+        self.last_div_score = None
         self.game = SyncGame.create(headless=headless, user_data_dir=user_data_dir)
         self.game.load()
         self._update_state()
 
     def _update_state(self):
         self._state = self.game.get_state()
+
+    @property
+    def state(self):
+        return self._state
 
     @property
     def states(self):
@@ -40,11 +54,11 @@ class NeyboyEnvironment(Environment):
         self.game.stop()
 
     def reset(self):
-        logging.info('{}'.format(self))
+        log.debug('{}'.format(self))
         self.game.restart()
         self._update_state()
         self.game.pause()
-        return self._state.snapshot
+        return self.state.snapshot
 
     def execute(self, action):
         self.game.resume()
@@ -54,14 +68,20 @@ class NeyboyEnvironment(Environment):
             self.game.tap_right()
         self._update_state()
         self.game.pause()
-        reward = 1.0
-        is_over = self._state.status == GAME_OVER_SCREEN
-        logging.debug('HiScore: {}, Score: {}, Action: {}, Reward: {}, GameOver: {}'.format(self._state.hiscore,
-                                                                                            self._state.score,
+        is_over = self.state.status == GAME_OVER_SCREEN
+        if is_over:
+            reward = self.death_reward
+        else:
+            angle = self.state.position['angle']
+            cosine = math.cos(angle)
+            reward = 1 if cosine > 0.7 else 0
+            log.debug('HiScore: {}, Score: {}, Action: {}, position_label: {}, Reward: {}, GameOver: {}'.format(self.state.hiscore,
+                                                                                            self.state.score,
                                                                                             ACTION_NAMES[action],
+                                                                                            self.state.position['name'],
                                                                                             reward,
                                                                                             is_over))
-        return self._state.snapshot, is_over, reward
+        return self.state.snapshot, is_over, reward
 
     def __str__(self):
         return 'NeyboyEnvironment(hiscore={}, score={}, status={})'.format(self._state.hiscore, self._state.score, self._state.status)

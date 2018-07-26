@@ -13,16 +13,13 @@ from PIL import Image
 from pyppeteer import launch
 from syncer import sync
 
-#0 for start_screen
 START_SCREEN = 0
-#1 for game_screen
 GAME_SCREEN = 1
-#2 for game_over_screen
 GAME_OVER_SCREEN = 2
 
 EASTER_EGG_APPEARANCE_FREQUENCY = 10
 
-GameState = namedtuple('GameState', ['game_id', 'id', 'score', 'status', 'hiscore', 'snapshot', 'timestamp', 'dimensions'])
+GameState = namedtuple('GameState', ['game_id', 'id', 'score', 'status', 'hiscore', 'snapshot', 'timestamp', 'dimensions', 'position'])
 
 
 class Game:
@@ -194,7 +191,6 @@ class Game:
         elif playing_status == GAME_OVER_SCREEN:  # game over
             await self.wait_until_replay_button_is_active()
             logging.debug('Replay button active')
-            # FIXME find out why the whataspp icon is clicked sporadically
             sleep(0.5)
             await self.page.mouse.click(400, 525)
         else:
@@ -221,6 +217,15 @@ class Game:
             encoded_snapshot = base64.b64encode(snapshot)
             return encoded_snapshot.decode('ascii')
 
+    @staticmethod
+    def _normalize_angle(position):
+        angle = float(position['angle'])
+        if 6.5 > angle >= 4.5:
+            angle = max((angle - 6.3) / 1.5, -1)
+        elif 1.8 > angle > 0:
+            angle = min(angle / 1.5, 1)
+        position['angle'] = angle
+
     async def get_state(self, include_snapshot='numpy', fmt='image/jpeg', quality=30, crop=True):
         """
 
@@ -236,22 +241,25 @@ class Game:
                 const {x, y, width, height} = iframe.getBoundingClientRect();
                 const dimensions = {x, y, width, height};
                 const iframeWindow = iframe.contentWindow;
+                const runtime = iframeWindow.cr_getC2Runtime();
+                const gameLayer = runtime.getLayerByName('Game');
+                const score = gameLayer.instances[4].text || 0;
+                const hiscore = runtime.getEventVariableByName('hiscore').data || 0;
+                const inst3 = gameLayer.instances[3];
+                const position = {
+                    name: inst3.animTriggerName,
+                    angle: inst3.angle
+                };                
+                const status = runtime.getEventVariableByName('isPlaying').data;
+                
                 if (includeSnapshot) {
                     iframeWindow['cr_onSnapshot'] = function(snapshot) {
-                        const runtime = iframeWindow.cr_getC2Runtime();
-                        const score = runtime.getLayerByName('Game').instances[4].text || 0;
-                        const hiscore = runtime.getEventVariableByName('hiscore').data || 0;
-                        const status = runtime.getEventVariableByName('isPlaying').data;
-                        resolve({score, hiscore, snapshot, status, dimensions});
+                        resolve({score, hiscore, snapshot, status, dimensions, position});
                     }
                     iframeWindow.cr_getSnapshot(format, quality);
                 } else {
-                        const runtime = iframeWindow.cr_getC2Runtime();
-                        const score = runtime.getLayerByName('Game').instances[4].text || 0;
-                        const hiscore = runtime.getEventVariableByName('hiscore').data || 0;
-                        const status = runtime.getEventVariableByName('isPlaying').data;
-                        const snapshot = null;
-                        resolve({score, hiscore, status, snapshot, dimensions});
+                    const snapshot = null;
+                    resolve({score, hiscore, snapshot, status, dimensions, position});
                 }
             })
         }''', include_snapshot, fmt, quality)
@@ -262,6 +270,10 @@ class Game:
         state['id'] = self.state_id
         state['game_id'] = self.game_id
         state['timestamp'] = dt.datetime.today().timestamp()
+
+        position = state['position']
+        self._normalize_angle(position)
+        state['position'] = position
 
         if include_snapshot is not None:
             dims = state['dimensions']
@@ -324,71 +336,6 @@ class Game:
         return "\n".join(("".join(r) for r in chars[img.astype(int)]))
 
 
-# class SyncGame:
-#
-#     def __init__(self, game: Game):
-#         self.game = game
-#
-#     @staticmethod
-#     def create(headless=True, user_data_dir=None) -> 'SyncGame':
-#         o = sync(Game.create)(headless, user_data_dir)
-#         return SyncGame(o)
-#
-#     def dimensions(self):
-#         return sync(self.game.dimensions)()
-#
-#     def is_loaded(self):
-#         return sync(self.game.is_loaded)()
-#
-#     def is_over(self):
-#         return sync(self.game.is_over)()
-#
-#     def load(self):
-#         return sync(self.game.load)()
-#
-#     def start(self):
-#         return sync(self.game.start)()
-#
-#     def pause(self):
-#         return sync(self.game.pause)()
-#
-#     def resume(self):
-#         return sync(self.game.resume)()
-#
-#     def get_score(self):
-#         return sync(self.game.get_score)()
-#
-#     def get_scores(self):
-#         return sync(self.game.get_scores)()
-#
-#     def get_high_score(self):
-#         return sync(self.game.get_high_score())()
-#
-#     def tap_right(self, delay=0):
-#         return sync(self.game.tap_right)(delay)
-#
-#     def tap_left(self, delay=0):
-#         return sync(self.game.tap_left)(delay)
-#
-#     def stop(self):
-#         return sync(self.game.stop)()
-#
-#     def restart(self):
-#         return sync(self.game.restart)()
-#
-#     def _click(self, x, y):
-#         return sync(self.game._click)(x, y)
-#
-#     def screenshot(self, format="jpeg", quality=30, encoding='binary'):
-#         # reconstruct image as an numpy array
-#         img_bytes = sync(self.game.screenshot)(format, quality, encoding)
-#         img = Image.open(io.BytesIO(img_bytes))
-#         return np.array(img)
-#
-#     def get_state(self, include_snapshot='numpy', fmt='image/jpeg', quality=30, crop=True):
-#         return sync(self.game.get_state)(include_snapshot, fmt, quality, crop)
-#
-
 class SyncGame:
 
     def __init__(self, game: Game):
@@ -401,3 +348,28 @@ class SyncGame:
     def create(headless=True, user_data_dir=None) -> 'SyncGame':
         o = sync(Game.create)(headless, user_data_dir)
         return SyncGame(o)
+
+
+if __name__ == '__main__':
+    position = dict(
+        name='cry',
+        angle=6.26
+    )
+    Game._normalize_angle(position)
+    assert position['angle'] == -0.02666666666666669
+
+    position['angle'] = 4.75
+    Game._normalize_angle(position)
+    assert position['angle'] == -1
+
+    position['angle'] = 0
+    Game._normalize_angle(position)
+    assert position['angle'] == 0
+
+    position['angle'] = 0.05
+    Game._normalize_angle(position)
+    assert position['angle'] == 0.03333333333333333
+
+    position['angle'] = 1.53
+    Game._normalize_angle(position)
+    assert position['angle'] == 1
