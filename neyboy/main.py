@@ -7,6 +7,7 @@ from PIL import Image
 from tensorforce.agents import PPOAgent
 from tensorforce.execution import Runner
 
+from neyboy.runner import MetricsLoggingRunner
 from .environment import NeyboyEnvironment
 
 
@@ -158,10 +159,11 @@ def main():
         logger.info("Configuration:")
         logger.info(agent)
 
-    runner = Runner(
+    runner = MetricsLoggingRunner(
         agent=agent,
         environment=environment,
-        repeat_actions=args.repeat_actions
+        repeat_actions=args.repeat_actions,
+        log_dir=args.save_dir
     )
 
     if args.debug:  # TODO: Timestep-based reporting
