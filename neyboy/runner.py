@@ -22,7 +22,7 @@ class MetricsLoggingRunner(Runner):
                     episode = r.global_episode
                     reward = r.episode_rewards[-1]
                     steps_per_second = r.global_timestep / (time.time() - r.start_time)
-                    csv.write('{:d},{:d},{:0.2f},{:f}\n'.format(episode, r.current_timestep, steps_per_second, reward))
+                    csv.write('{:d},{:d},{:0.2f},{:f},{:d}\n'.format(episode, r.current_timestep, steps_per_second, reward, self.environment.state.score))
                     return episode_finished(r, id_)
                 super().run(num_timesteps, num_episodes, max_episode_timesteps, deterministic, new_episode_finished, summary_report,
                             summary_interval, timesteps, episodes, testing, sleep)
