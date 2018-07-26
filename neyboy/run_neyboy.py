@@ -30,6 +30,7 @@ def main():
     parser.add_argument('-n', '--network', default=None, help="Network specification file")
     parser.add_argument('-e', '--episodes', type=int, default=None, help="Number of episodes")
     parser.add_argument('-t', '--timesteps', type=int, default=None, help="Number of timesteps")
+    parser.add_argument('-st', '--score-threshold', type=float, default=0.95, help="Score threshold")
     parser.add_argument('-m', '--max-episode-timesteps', type=int, default=None, help="Maximum number of timesteps per episode")
     parser.add_argument('-d', '--deterministic', action='store_true', default=False, help="Choose actions deterministically")
     parser.add_argument('-s', '--save', help="Save agent to this dir")
@@ -53,7 +54,8 @@ def main():
     logger.setLevel(logging.INFO)
 
     environment = NeyboyEnvironment(
-        headless=not args.visualize
+        headless=not args.visualize,
+        score_threshold=args.score_threshold
     )
 
     if args.agent is not None:

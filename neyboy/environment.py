@@ -18,7 +18,7 @@ ACTION_RIGHT = 2
 
 class NeyboyEnvironment(Environment):
 
-    def __init__(self, headless=True, scoring_reward=1, death_reward=-1, stay_alive_reward=0.01, easter_egg_reward=5, user_data_dir=None):
+    def __init__(self, headless=True, score_threshold=0.95, death_reward=-1, user_data_dir=None):
         Environment.__init__(self)
 
         if user_data_dir is None:
@@ -26,11 +26,8 @@ class NeyboyEnvironment(Environment):
             neyboy_data_dir = Path(home_dir, 'neyboy')
             user_data_dir = str(neyboy_data_dir)
 
-        self.stay_alive_reward = stay_alive_reward
+        self.scoring_threshold = score_threshold
         self.death_reward = death_reward
-        self.scoring_reward = scoring_reward
-        self.easter_egg_reward = easter_egg_reward
-        self.last_div_score = None
         self.game = SyncGame.create(headless=headless, user_data_dir=user_data_dir)
         self.game.load()
         self._update_state()
@@ -74,7 +71,7 @@ class NeyboyEnvironment(Environment):
         else:
             angle = self.state.position['angle']
             cosine = math.cos(angle)
-            reward = 1 if cosine > 0.7 else 0
+            reward = cosine if cosine > self.scoring_threshold else 0
             log.debug('HiScore: {}, Score: {}, Action: {}, position_label: {}, Reward: {}, GameOver: {}'.format(self.state.hiscore,
                                                                                             self.state.score,
                                                                                             ACTION_NAMES[action],

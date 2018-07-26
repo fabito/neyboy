@@ -16,6 +16,7 @@ def main():
     parser.add_argument('-t', '--timesteps', type=int, default=None, help="Number of timesteps")
     parser.add_argument('-b', '--batch-size', type=int, default=64, help="Batch Size")
     parser.add_argument('-lr', '--learning-rate', type=float, default=1e-5, help="Learning Rate")
+    parser.add_argument('-st', '--score-threshold', type=float, default=0.95, help="Score threshold")
     parser.add_argument('-m', '--max-episode-timesteps', type=int, default=2000,
                         help="Maximum number of timesteps per episode")
     parser.add_argument('-r', '--repeat-actions', type=int, default=4,
@@ -39,7 +40,8 @@ def main():
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-    environment = NeyboyEnvironment(headless=not args.visualize)
+    environment = NeyboyEnvironment(headless=not args.visualize,
+                                    score_threshold=args.score_threshold)
 
     # Do a quick random test-run with image capture of the first n images -> then exit after 1000 steps.
     if args.random_test_run:
@@ -122,6 +124,23 @@ def main():
             type='adam',
             learning_rate=args.learning_rate
         ),
+
+        # OOM
+        # baseline_mode="states",
+        # baseline={
+        #     "type": "cnn",
+        #     "conv_sizes": [32, 32],
+        #     "dense_sizes": [32]
+        # },
+        # baseline_optimizer={
+        #     "type": "multi_step",
+        #     "optimizer": {
+        #         "type": "adam",
+        #         "learning_rate": 1e-3
+        #     },
+        #     "num_steps": 5
+        # },
+
         saver=dict(
             directory=args.save_dir,
             seconds=600
