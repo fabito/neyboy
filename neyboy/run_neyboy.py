@@ -140,8 +140,8 @@ def main():
         max_episode_timesteps=args.max_episode_timesteps,
         deterministic=args.deterministic,
         episode_finished=episode_finished,
-        # testing=args.test,
-        # sleep=args.sleep
+        testing=args.test,
+        sleep=args.sleep
     )
     runner.close()
 
