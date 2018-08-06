@@ -5190,9 +5190,8 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 			}
 		}
         tickarr = this.objects_to_tick2.valuesRef();
-        for (i = 0, leni = tickarr.length; i < leni; i++){
+        for (i = 0, leni = tickarr.length; i < leni; i++)
             tickarr[i].tick2();
-        }
 		this.isInOnDestroy--;		// end preventing instance lists from being changed
 	};
 	Runtime.prototype.onWindowBlur = function ()
@@ -17044,6 +17043,7 @@ cr.plugins_.Audio = function(runtime)
 		context = null;
 		if (typeof AudioContext !== "undefined")
 		{
+			// Disable sound
 			// api = API_WEBAUDIO;
 			// context = new AudioContext();
 			this.runtime.DestroyInstance(this);
@@ -24522,7 +24522,6 @@ cr.behaviors.Sin = function(runtime)
 			this.i += (dt / this.period) * _2pi;
 			this.i = this.i % _2pi;
 		}
-
 		this.updateFromPhase();
 	};
 	behinstProto.updateFromPhase = function ()

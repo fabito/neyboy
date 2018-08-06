@@ -15,5 +15,27 @@
     </div>
 </div>
 <script type="text/javascript" src="main.js"></script>
+	<script>
+
+	'use strict';
+
+	var paused = false;
+
+	document.addEventListener('keypress', (event) => {
+	  const keyName = event.key;
+	  if (keyName === 'p') {
+            const iframe = document.getElementsByTagName("iframe")[0];
+            const iframeWindow = iframe.contentWindow;
+            if (paused) {
+            	iframeWindow.cr_setSuspended(false);
+            	paused = false;
+            } else {
+            	iframeWindow.cr_setSuspended(true);
+            	paused = true;
+            }
+	  }
+	});
+
+	</script>
 </body>
 </html>
