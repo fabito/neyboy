@@ -3,12 +3,7 @@
 <head>
     <meta charset="UTF-8" />
 	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-	<meta name="viewport" content="width=320px, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, target-densityDpi=device-dpi" />
-
-
-	<title>NeyBoy</title>
-
-
+	<title>NeyBoy Challenge - OpenAI Gym</title>
 	<style type="text/css">
 
 		* {
@@ -70,7 +65,7 @@
 		{			
 			let width = getParameterByName('w') || 180;
 			let height = getParameterByName('h') || 320;
-			let mode = getParameterByName('m') || 5;
+			let mode = getParameterByName('m') || 2;
 			
 			window.neyboyChallenge = new NeyboyChallenge(window, "c2canvas", parseInt(width, 10), parseInt(height, 10), parseInt(mode, 10)); 
 		});
