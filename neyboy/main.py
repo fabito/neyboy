@@ -142,10 +142,16 @@ def main():
         #     "num_steps": 5
         # },
 
-        saver=dict(
+        # saver=dict(
+        #     directory=args.save_dir,
+        #     seconds=600
+        # ),
+
+        summarizer=dict(
             directory=args.save_dir,
-            seconds=600
-        ),
+            labels=['rewards'],
+            steps=50
+        )
     )
 
     if args.load:

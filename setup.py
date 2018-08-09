@@ -13,6 +13,10 @@ setup(name='neyboy',
           'syncer',
           'pyppeteer'
       ],
+      extras_require={
+            "tf": ["tensorflow"],
+            "tf_gpu": ["tensorflow-gpu"],
+      },
       description='Neyboy Challenge AI agent.',
       author='Fabito',
       url='https://github.com/fabito/neyboy',

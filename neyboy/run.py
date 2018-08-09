@@ -1,11 +1,12 @@
 import asyncio
 
-from .neyboy import Game
+from neyboy import Game
 
 
 async def main():
 
     game = await Game.create(headless=False)
+    await game.load()
     await game.start()
 
     screenshot = await game.screenshot()
