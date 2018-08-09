@@ -17,12 +17,12 @@ from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
-from tensorforce import TensorForceError
-from tensorforce.agents import agents as AgentsDictionary, Agent
-from tensorforce.execution import ThreadedRunner
-from tensorforce.execution.threaded_runner import WorkerAgentGenerator
+from neyboy_tensorforce import TensorForceError
+from neyboy_tensorforce.agents import agents as AgentsDictionary, Agent
+from neyboy_tensorforce.execution import ThreadedRunner
+from neyboy_tensorforce.execution.threaded_runner import WorkerAgentGenerator
 
-from neyboy.environment import NeyboyEnvironment
+from neyboy_tensorforce.environment import NeyboyEnvironment
 
 """
 python -m neyboy.threaded_neyboy --load checkpoints4/ --save checkpoints5/ -a configs/ppo.json -n configs/cnn.json -fs 2 -w 2

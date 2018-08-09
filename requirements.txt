@@ -1,5 +1,7 @@
-syncer
+tensorflow-gpu
 git+https://github.com/reinforceio/tensorforce.git
-pyppeteer
-blessed
-asciimatics
+git+https://github.com/fabito/baselines.git#egg=baselines[tf_gpu]
+git+https://github.com/fabito/gym-neyboy.git
+pytest
+matplotlib
+pandas
