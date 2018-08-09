@@ -1,11 +1,3 @@
-function __delay__(timer) {
-    return new Promise(resolve => {
-        timer = timer || 2000;
-        setTimeout(function () {
-            resolve();
-        }, timer);
-    });
-};
 
 function getParameterByName(name, url) {
     if (!url) url = window.location.href;
@@ -21,43 +13,27 @@ class NeyboyChallenge {
 
 	constructor(ctx, el, width=180, height=320, fullscreen_mode=5) {
 		this.ctx = ctx;
-		this.data = ctx.data;
-		this.data.project[10] = width;
-		this.data.project[11] = height;
-		// 0 = off, 1 = crop, 2 = scale inner, 3 = scale outer, 4 = letterbox scale, 5 = integer letterbox scale
-		this.data.project[12] = fullscreen_mode; 
-		// this.audio_to_preload = pm[7];
-		this.data.project[7] = []
-		// this.preloadSounds = pm[25];
-		this.data.project[25] = false;
 
-		// this.data.project[15] = false;
-		this.runtime = ctx.cr_createRuntime(el);
+		if (ctx.data) {
+			this.data = ctx.data;
+			this.data.project[10] = width;
+			this.data.project[11] = height;
+			// 0 = off, 1 = crop, 2 = scale inner, 3 = scale outer, 4 = letterbox scale, 5 = integer letterbox scale
+			this.data.project[12] = fullscreen_mode; 
+			// this.audio_to_preload = pm[7];
+			this.data.project[7] = []
+			// this.preloadSounds = pm[25];
+			this.data.project[25] = false;			
+		    // this.data.project[15] = false;
+		}
 
-		// console.log(this.data.project[15])
-
-		// this.audio_to_preload = pm[7];
-		// this.files_subfolder = pm[8];
-		// this.pixel_rounding = pm[9];
-		// this.aspect_scale = 1.0;
-		// this.enableWebGL = pm[13];
-		// this.linearSampling = pm[14];
-		// this.clearBackground = pm[15];
-		// this.versionstr = pm[16];
-		// this.useHighDpi = pm[17];
-		// this.orientations = pm[20];		// 0 = any, 1 = portrait, 2 = landscape
-		// this.autoLockOrientation = (this.orientations > 0);
-		// this.pauseOnBlur = pm[22];
-		// this.wantFullscreenScalingQuality = pm[23];		// false = low quality, true = high quality
-		// this.fullscreenScalingQuality = this.wantFullscreenScalingQuality;
-		// this.downscalingQuality = pm[24];	// 0 = low (mips off), 1 = medium (mips on, dense spritesheet), 2 = high (mips on, sparse spritesheet)
-		// this.preloadSounds = pm[25];
-
-
+		this.runtime = ctx.cr_getC2Runtime();
+		if (!this.runtime) {
+			this.runtime = ctx.cr_createRuntime(el);	
+		}
 		// setInterval(()=>{
 		// 		console.log(this.dimensions());
 		// }, 1000)
-	
 	}
 
 	isReady(){
@@ -81,8 +57,9 @@ class NeyboyChallenge {
 	}
 
 	shuffleToasts() {
-		let frames = this.data.project[3][20][7][0].frames;
-		this.data.project[3][20][7][0].frames = frames.map((a) => [Math.random(),a]).sort((a,b) => a[0]-b[0]).map((a) => a[1]);
+		let anim = this.runtime.getObjectByUID(26);
+		let frames = anim.cur_animation.frames;
+		anim.cur_animation.frames = frames.map((a) => [Math.random(),a]).sort((a,b) => a[0]-b[0]).map((a) => a[1]);
 	}
 
 	pause() {
@@ -96,8 +73,24 @@ class NeyboyChallenge {
 	}
 
 	getScore() {
-        const score = this.runtime.getLayerByName('Game').instances[4].text || '0';
+		const scoreInstance = this.runtime.getObjectByUID(5); 
+        const score = scoreInstance.text || '0';
         return parseInt(score, 10);			
+	}
+
+	getPosition() {
+		const positionInstance = this.runtime.getObjectByUID(0); 
+        let angle = positionInstance.angle;
+        // convert angle to [-1, 1] range 
+        if (angle < 6.5 && angle >= 4.5)
+            angle = Math.max((angle - 6.3) / 1.5, -1);
+        else if (angle < 1.8 && angle > 0)
+            angle = Math.min(angle / 1.5, 1);
+        const position = {
+            name: positionInstance.animTriggerName,
+            angle: angle
+        }; 
+        return position;			
 	}
 
 	dimensions() {
@@ -109,31 +102,17 @@ class NeyboyChallenge {
         return {x, y, width, height};			
 	}
 
-	async getGameLayer() {
-	    while (this.runtime.getLayerByName('Game') == undefined) {
-	    	await __delay__(10);
-	    }
-	    return this.runtime.getLayerByName('Game');
-	}
-
 	status(){
         return this.runtime.getEventVariableByName('isPlaying').data;
 	}
 
 	async state(includeSnapshot=true, format='image/jpeg', quality=30) {
-		const gameLayer = await this.getGameLayer();
         return new Promise((resolve, reject) => {
-        	
             const dimensions = this.dimensions()
             const score = this.getScore();
             const hiscore = this.runtime.getEventVariableByName('hiscore').data || 0;
-            const inst3 = gameLayer.instances[3];
-            const position = {
-                name: inst3.animTriggerName,
-                angle: inst3.angle
-            };                
+            const position = this.getPosition()                
             const status = this.status();
-
             if (includeSnapshot) {
                 this.ctx['cr_onSnapshot'] = function(snapshot) {
                     resolve({score, hiscore, snapshot, status, dimensions, position});
