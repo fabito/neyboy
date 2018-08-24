@@ -9,15 +9,12 @@ setup(name='neyboy',
       packages=[package for package in find_packages()],
       install_requires=[
           'tensorforce',
-          'blessed',
-          'syncer',
-          'pyppeteer'
       ],
       extras_require={
             "tf": ["tensorflow"],
             "tf_gpu": ["tensorflow-gpu"],
       },
-      description='Neyboy Challenge AI agent.',
+      description='Neyboy Challenge AI Agent.',
       author='Fabito',
       url='https://github.com/fabito/neyboy',
       author_email='fabio.uechi@gmail.com',

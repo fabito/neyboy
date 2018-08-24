@@ -7,18 +7,19 @@ from baselines.common import set_global_seeds
 from baselines.common.atari_wrappers import MaxAndSkipEnv, WarpFrame
 from baselines.common.cmd_util import arg_parser
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
+from gym import wrappers
 
 import gym_neyboy
-from neyboy_wrappers import ObservationSaver
+from neyboy.baselines.neyboy_wrappers import Cropper
 
 
 def make_neyboy_environment(env_id, seed=0, rank=0, allow_early_resets=False, frame_skip=4, save_obs=False):
     env = gym.make(env_id)
     env = MaxAndSkipEnv(env, skip=frame_skip)
-    # if save_obs:
-    #     env = ObservationSaver(env, stage_name='max_skip')
     env.seed(seed + rank)
-    env = Monitor(env, logger.get_dir() and os.path.join(logger.get_dir(), str(rank)), allow_early_resets=allow_early_resets)
+    logdir = logger.get_dir() and os.path.join(logger.get_dir(), str(rank))
+    # env = wrappers.Monitor(env, logdir, force=True)
+    env = Monitor(env, logdir, allow_early_resets=allow_early_resets)
     return env
 
 
@@ -32,9 +33,8 @@ def make_neyboy_env(env_id, num_env, seed, wrapper_kwargs=None, start_index=0, a
     def make_env(rank):
         def _thunk():
             env = make_neyboy_environment(env_id, seed, rank, allow_early_resets, frame_skip=frame_skip, save_obs=save_obs)
+            env = Cropper(env)
             env = WarpFrame(env)
-            # if save_obs:
-            #     env = ObservationSaver(env, stage_name='warp')
             return env
         return _thunk
 

@@ -1,11 +1,9 @@
-import os
-import threading
-from pathlib import Path
 import random
+from pathlib import Path
+
 import cv2
 import gym
 import numpy as np
-from PIL import Image
 from baselines import logger
 from gym import spaces
 
@@ -104,7 +102,6 @@ class VerticallyFlipFrame(gym.Wrapper):
             return 1
         return action
 
-
         frame = cv2.flip(frame, 1)
         return frame
 
@@ -114,3 +111,20 @@ class VerticallyFlipFrame(gym.Wrapper):
         if action == 2:
             return 1
         return action
+
+
+class Cropper(gym.ObservationWrapper):
+
+    def __init__(self, env):
+        """Crop frames"""
+        gym.ObservationWrapper.__init__(self, env)
+        h, self.width, c = self.observation_space.shape
+        self.x = 0
+        self.y = int(h / 2)
+        self.height = int(h - self.y - (h - self.y) * 0.15)
+        self.observation_space = spaces.Box(low=0, high=255,
+                                            shape=(self.height, self.width, c), dtype=np.uint8)
+
+    def observation(self, observation):
+        crop_img = observation[self.y:self.y + self.height, self.x:self.x + self.width]
+        return crop_img
