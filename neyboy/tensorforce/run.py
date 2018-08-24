@@ -1,6 +1,6 @@
 import asyncio
 
-from neyboy import Game
+from neyboy_tensorforce import Game
 
 
 async def main():

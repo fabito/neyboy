@@ -6,4 +6,6 @@ Attempt to train a model to play the [Neyboy Challenge](https://neyboy.com.br) w
 using Tensorforce and Pyppeteer (for the browser based environment).    
 
 
-http://yuml.me/edit/c5184837z
+```bash
+python -m neyboy.baselines.enjoy --load-path /checkpoints/00320 \
+```

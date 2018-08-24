@@ -2,7 +2,7 @@ import logging
 import math
 from pathlib import Path
 
-from tensorforce.environments import Environment
+from neyboy_tensorforce.environments import Environment
 
 from .neyboy import SyncGame, GAME_OVER_SCREEN
 

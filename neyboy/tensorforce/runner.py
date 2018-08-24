@@ -1,7 +1,7 @@
 import os
 import time
 
-from tensorforce.execution import Runner
+from neyboy_tensorforce.execution import Runner
 import tensorflow as tf
 
 

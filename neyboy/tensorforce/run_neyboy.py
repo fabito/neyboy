@@ -12,9 +12,9 @@ import logging
 import os
 import time
 
-from tensorforce import TensorForceError
-from tensorforce.agents import Agent
-from tensorforce.execution import Runner
+from neyboy_tensorforce import TensorForceError
+from neyboy_tensorforce.agents import Agent
+from neyboy_tensorforce.execution import Runner
 from .environment import NeyboyEnvironment
 
 
