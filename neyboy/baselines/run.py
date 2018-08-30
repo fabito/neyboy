@@ -34,8 +34,6 @@ def train(env_id, learning_rate, max_learning_rate, num_epoch, buffer_size, batc
                             inter_op_parallelism_threads=ncpu)
     config.gpu_options.allow_growth = True  # pylint: disable=E1101
 
-    ncpu = multiprocessing.cpu_count()
-    if sys.platform == 'darwin': ncpu //= 2
     # nenv = num_workers or ncpu if not render else 1
     # alg = policy
     # rank = MPI.COMM_WORLD.Get_rank() if MPI else 0
