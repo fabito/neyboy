@@ -9,7 +9,7 @@ import tensorflow as tf
 from baselines import logger
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 
-from neyboy.baselines import custom_ppo2 as ppo2
+from neyboy.baselines.ppo2 import ppo2
 from neyboy.baselines.cmd_util import neyboy_arg_parser, make_neyboy_env
 
 try:
