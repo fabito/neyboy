@@ -1,7 +1,5 @@
-tensorflow-gpu
-git+https://github.com/reinforceio/tensorforce.git
-git+https://github.com/openai/baselines.git
+stable-baselines3[extra]
 git+https://github.com/fabito/gym-neyboy.git
-pytest
-matplotlib
-pandas
+# pytest
+# matplotlib
+# pandas
