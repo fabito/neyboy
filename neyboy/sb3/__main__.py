@@ -69,6 +69,7 @@ def main():
     env = VecTransposeImage(VecFrameStack(_env, 4))
     model = PPO(policy=args.policy,
                 env=env,
+                n_steps=args.n_steps,
                 verbose=verbose,
                 batch_size=args.batch_size,
                 clip_range=lambda f: f * 0.1,
