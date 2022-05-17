@@ -1,7 +1,5 @@
 import datetime
-import multiprocessing
 import os
-import sys
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, BaseCallback, CallbackList, EvalCallback
@@ -28,30 +26,29 @@ class ImageRecorderCallback(BaseCallback):
 
 def main():
     parser = neyboy_arg_parser()
-    parser.add_argument('--policy', help='Policy architecture', choices=['cnn', 'lstm', 'lnlstm', 'mlp'],
-                        default='cnn')
+    parser.add_argument('--policy', help='Policy architecture', choices=['CnnPolicy', 'MlpPolicy', 'MultiInputPolicy'],
+                        default='CnnPolicy')
     parser.add_argument('--output-dir', help='Output dir', default='/tmp')
     parser.add_argument('--num-workers', type=int, default=4)
     parser.add_argument('--frame-skip', type=int, default=4)
-    parser.add_argument('--buffer-size', type=int, default=512)
-    parser.add_argument('--batch-size', type=int, default=128)
-    parser.add_argument('--num-epoch', type=int, default=4)
-    parser.add_argument('--lr', type=float, default=2.5e-4)
-    parser.add_argument('--max-lr', type=float, default=8e-4)
+    parser.add_argument('--n-steps', type=int, default=2048)
+    parser.add_argument('--batch-size', type=int, default=64)
+    parser.add_argument('--num-epoch', type=int, default=10)
+    parser.add_argument('--lr', type=float, default=3e-4)
+    parser.add_argument('--checkpoint-save-freq', type=int, default=1000)
     parser.add_argument('--load-path', help='load path', default=None)
+    parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
     dir_sufix = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
     dir_name = os.path.join(args.output_dir,
-                            'w{}-b{}-buf{}-e{}-fs{}-lr{}-{}'.format(args.num_workers, args.batch_size,
-                                                                    args.buffer_size, args.num_epoch,
+                            'w{}-b{}-ns{}-e{}-fs{}-lr{}-{}'.format(args.num_workers, args.batch_size,
+                                                                    args.n_steps, args.num_epoch,
                                                                     args.frame_skip, args.lr, dir_sufix))
     format_strs = 'stdout,log,csv,tensorboard'.split(',')
     logger = configure(dir_name, format_strs)
-
-    ncpu = multiprocessing.cpu_count()
-    if sys.platform == 'darwin':
-        ncpu //= 2
+    verbose = 2 if args.verbose else 1
+    total_timesteps = int(args.num_timesteps * 1.1)
 
     _env = make_neyboy_env(args.env, args.num_workers, logger, args.seed, frame_skip=args.frame_skip)
 
@@ -62,14 +59,24 @@ def main():
     #                              log_path=logger.get_dir(), eval_freq=1000,
     #                              deterministic=True, render=False)
     # Save a checkpoint every 1000 steps
-    checkpoint_callback = CheckpointCallback(save_freq=1000, save_path=logger.get_dir(), name_prefix='rl_model')
+
+    checkpoint_callback = CheckpointCallback(save_freq=args.checkpoint_save_freq, save_path=logger.get_dir(),
+                                             name_prefix='rl_model')
 
     # Create the callback list
     callbacks = [checkpoint_callback, ImageRecorderCallback()]
 
     env = VecTransposeImage(VecFrameStack(_env, 4))
-    model = PPO("CnnPolicy", env, n_steps=512, verbose=1, tensorboard_log=logger.get_dir())
-    model.learn(total_timesteps=args.num_timesteps, callback=callbacks)
+    model = PPO(policy=args.policy,
+                env=env,
+                verbose=verbose,
+                batch_size=args.batch_size,
+                clip_range=lambda f: f * 0.1,
+                n_epochs=args.num_epoch,
+                learning_rate=args.lr,
+                tensorboard_log=logger.get_dir(),
+                )
+    model.learn(total_timesteps=total_timesteps, callback=callbacks)
 
 
 if __name__ == '__main__':
