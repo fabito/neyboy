@@ -95,8 +95,9 @@ def main():
     total_timesteps = int(args.num_timesteps * 1.1)
 
     _env = make_neyboy_env(args.env, args.num_workers, logger, args.seed, frame_skip=args.frame_skip)
+    env = VecTransposeImage(VecFrameStack(_env, 4))
 
-    # _eval_env = make_neyboy_env(args.env, 1, logger, args.seed, frame_skip=args.frame_skip, allow_early_resets=True)
+    # _eval_env = make_neyboy_env(args.env, args.num_workers, logger, args.seed, frame_skip=args.frame_skip, allow_early_resets=True)
     # eval_env = VecTransposeImage(VecFrameStack(_eval_env, 4))
     # # Use deterministic actions for evaluation
     # eval_callback = EvalCallback(eval_env, best_model_save_path=logger.get_dir(),
@@ -110,7 +111,6 @@ def main():
     # Create the callback list
     callbacks = [checkpoint_callback, ImageRecorderCallback(), RawStatisticsCallback()]
 
-    env = VecTransposeImage(VecFrameStack(_env, 4))
     model = PPO(policy=args.policy,
                 env=env,
                 n_steps=args.n_steps,
@@ -121,6 +121,7 @@ def main():
                 learning_rate=args.lr,
                 tensorboard_log=logger.get_dir(),
                 )
+    model.set_logger(logger)
     model.learn(total_timesteps=total_timesteps, callback=callbacks, log_interval=1)
 
 
